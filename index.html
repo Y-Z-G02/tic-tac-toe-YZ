@@ -32,6 +32,7 @@
       color: white;
       border-radius: 8px;
       cursor: pointer;
+      margin-top: 10px;
     }
 
     #game-container {
@@ -71,6 +72,7 @@
       margin-top: 15px;
       font-size: 24px;
       color: #333;
+      min-height: 30px;
     }
 
     button.reset {
@@ -86,30 +88,62 @@
     button.reset:hover {
       background-color: #588157;
     }
+
+    #lang-select {
+      margin-top: 10px;
+      font-size: 16px;
+      padding: 6px;
+      border-radius: 6px;
+      border: 1px solid #333;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
 
 <div id="welcome-screen">
   <h1>Hello SIB-24-1 👋</h1>
-  <h2>Добро пожаловать в игру Крестики-нолики!</h2>
-  <button onclick="startGame()">Начать игру</button>
+  <h2 id="welcome-text-ru">Добро пожаловать в игру Крестики-нолики!</h2>
+  <h2 id="welcome-text-en" style="display:none;">Welcome to Tic-Tac-Toe!</h2>
+  <button onclick="startGame()"><span id="start-btn-ru">Начать игру</span><span id="start-btn-en" style="display:none;">Start Game</span></button>
+  <br />
+  <select id="lang-select" onchange="changeLanguage()">
+    <option value="ru" selected>Русский</option>
+    <option value="en">English</option>
+  </select>
 </div>
 
 <div id="game-container">
   <div class="board" id="board"></div>
   <div class="status" id="status">Ходит: X</div>
-  <button class="reset" onclick="resetGame()">Сбросить</button>
+  <button class="reset" onclick="resetGame()"><span id="reset-btn-ru">Сбросить</span><span id="reset-btn-en" style="display:none;">Reset</span></button>
+  <div style="margin-top: 10px;">
+    <label><input type="checkbox" id="ai-toggle" onchange="toggleAI()"> <span id="ai-label-ru">Играть против компьютера</span><span id="ai-label-en" style="display:none;">Play vs Computer</span></label>
+  </div>
 </div>
+
+<!-- Звуки -->
+<audio id="click-sound" src="https://actions.google.com/sounds/v1/cartoon/pop.ogg"></audio>
+<audio id="win-sound" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"></audio>
+<audio id="draw-sound" src="https://actions.google.com/sounds/v1/cartoon/slide_whistle_to_drum_hit.ogg"></audio>
 
 <script>
   const board = document.getElementById('board');
   const status = document.getElementById('status');
   const gameContainer = document.getElementById('game-container');
   const welcomeScreen = document.getElementById('welcome-screen');
+  const clickSound = document.getElementById('click-sound');
+  const winSound = document.getElementById('win-sound');
+  const drawSound = document.getElementById('draw-sound');
+  const aiToggle = document.getElementById('ai-toggle');
+
   let currentPlayer = 'X';
   let cells = Array(9).fill(null);
   let gameOver = false;
+  let vsAI = false; // Игра против компьютера
+
+  // Переменные для локализации
+  const langSelect = document.getElementById('lang-select');
 
   function startGame() {
     welcomeScreen.style.display = 'none';
@@ -149,15 +183,52 @@
 
   function makeMove(index) {
     if (gameOver || cells[index]) return;
+    if(vsAI && currentPlayer === 'O') return; // блокируем ход игрока если ходит ИИ
+
     cells[index] = currentPlayer;
+    clickSound.play();
     createBoard();
     const winner = checkWinner();
     if (winner) {
       gameOver = true;
-      status.textContent = winner === 'Draw' ? 'Ничья!' : `Победил: ${winner}`;
+      if(winner === 'Draw') {
+        status.textContent = langSelect.value === 'ru' ? 'Ничья!' : 'Draw!';
+        drawSound.play();
+      } else {
+        status.textContent = (langSelect.value === 'ru' ? 'Победил: ' : 'Winner: ') + winner;
+        winSound.play();
+      }
     } else {
       currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
-      status.textContent = `Ходит: ${currentPlayer}`;
+      status.textContent = (langSelect.value === 'ru' ? 'Ходит: ' : 'Turn: ') + currentPlayer;
+      if(vsAI && currentPlayer === 'O'){
+        setTimeout(aiMove, 600);
+      }
+    }
+  }
+
+  // Простой ИИ: ходит в первую доступную клетку
+  function aiMove() {
+    if(gameOver) return;
+    let move = cells.findIndex(c => c === null);
+    if(move !== -1){
+      cells[move] = 'O';
+      clickSound.play();
+      createBoard();
+      const winner = checkWinner();
+      if (winner) {
+        gameOver = true;
+        if(winner === 'Draw') {
+          status.textContent = langSelect.value === 'ru' ? 'Ничья!' : 'Draw!';
+          drawSound.play();
+        } else {
+          status.textContent = (langSelect.value === 'ru' ? 'Победил: ' : 'Winner: ') + winner;
+          winSound.play();
+        }
+      } else {
+        currentPlayer = 'X';
+        status.textContent = (langSelect.value === 'ru' ? 'Ходит: ' : 'Turn: ') + currentPlayer;
+      }
     }
   }
 
@@ -165,8 +236,40 @@
     cells = Array(9).fill(null);
     currentPlayer = 'X';
     gameOver = false;
-    status.textContent = 'Ходит: X';
+    status.textContent = (langSelect.value === 'ru' ? 'Ходит: ' : 'Turn: ') + currentPlayer;
     createBoard();
+  }
+
+  function changeLanguage(){
+    const lang = langSelect.value;
+    // Приветственный экран
+    document.getElementById('welcome-text-ru').style.display = lang === 'ru' ? 'block' : 'none';
+    document.getElementById('welcome-text-en').style.display = lang === 'en' ? 'block' : 'none';
+    document.getElementById('start-btn-ru').style.display = lang === 'ru' ? 'inline' : 'none';
+    document.getElementById('start-btn-en').style.display = lang === 'en' ? 'inline' : 'none';
+    // Кнопка сброса
+    document.getElementById('reset-btn-ru').style.display = lang === 'ru' ? 'inline' : 'none';
+    document.getElementById('reset-btn-en').style.display = lang === 'en' ? 'inline' : 'none';
+    // Метка AI
+    document.getElementById('ai-label-ru').style.display = lang === 'ru' ? 'inline' : 'none';
+    document.getElementById('ai-label-en').style.display = lang === 'en' ? 'inline' : 'none';
+
+    // Статус игры
+    if(!gameOver){
+      status.textContent = (lang === 'ru' ? 'Ходит: ' : 'Turn: ') + currentPlayer;
+    } else {
+      const winner = checkWinner();
+      if(winner === 'Draw') {
+        status.textContent = lang === 'ru' ? 'Ничья!' : 'Draw!';
+      } else if(winner) {
+        status.textContent = (lang === 'ru' ? 'Победил: ' : 'Winner: ') + winner;
+      }
+    }
+  }
+
+  function toggleAI(){
+    vsAI = aiToggle.checked;
+    resetGame();
   }
 
   createBoard();
