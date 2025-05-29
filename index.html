@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Крестики-нолики</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: #f0f0f0;
+    }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      grid-template-rows: repeat(3, 100px);
+      gap: 5px;
+    }
+    .cell {
+      background: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 48px;
+      cursor: pointer;
+      border: 2px solid #333;
+    }
+    .cell.winner {
+      background-color: #8f8;
+    }
+    .status {
+      margin-top: 20px;
+      text-align: center;
+      font-size: 24px;
+    }
+    button {
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<div>
+  <div class="board" id="board"></div>
+  <div class="status" id="status">Ходит: X</div>
+  <div style="text-align:center;"><button onclick="resetGame()">Сбросить</button></div>
+</div>
+
+<script>
+  const board = document.getElementById('board');
+  const status = document.getElementById('status');
+  let currentPlayer = 'X';
+  let cells = Array(9).fill(null);
+  let gameOver = false;
+
+  function createBoard() {
+    board.innerHTML = '';
+    cells.forEach((cell, index) => {
+      const div = document.createElement('div');
+      div.classList.add('cell');
+      div.textContent = cell || '';
+      div.addEventListener('click', () => makeMove(index));
+      board.appendChild(div);
+    });
+  }
+
+  function checkWinner() {
+    const winCombos = [
+      [0,1,2],[3,4,5],[6,7,8], // rows
+      [0,3,6],[1,4,7],[2,5,8], // cols
+      [0,4,8],[2,4,6]          // diagonals
+    ];
+    for (let combo of winCombos) {
+      const [a, b, c] = combo;
+      if (cells[a] && cells[a] === cells[b] && cells[a] === cells[c]) {
+        document.querySelectorAll('.cell')[a].classList.add('winner');
+        document.querySelectorAll('.cell')[b].classList.add('winner');
+        document.querySelectorAll('.cell')[c].classList.add('winner');
+        return cells[a];
+      }
+    }
+    if (cells.every(c => c)) return 'Draw';
+    return null;
+  }
+
+  function makeMove(index) {
+    if (gameOver || cells[index]) return;
+    cells[index] = currentPlayer;
+    createBoard();
+    const winner = checkWinner();
+    if (winner) {
+      gameOver = true;
+      status.textContent = winner === 'Draw' ? 'Ничья!' : `Победил: ${winner}`;
+    } else {
+      currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+      status.textContent = `Ходит: ${currentPlayer}`;
+    }
+  }
+
+  function resetGame() {
+    cells = Array(9).fill(null);
+    currentPlayer = 'X';
+    gameOver = false;
+    status.textContent = 'Ходит: X';
+    createBoard();
+  }
+
+  createBoard();
+</script>
+
+</body>
+</html>
